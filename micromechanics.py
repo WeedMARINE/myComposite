@@ -21,6 +21,14 @@ def calculate_E2(E_f:float, E_m:float ,V_f:float) -> float:
     V_f: Volume fraction of fiber"""
     return (E_f*E_m)/(E_m*V_f + (1-V_f)*E_f)
 
+def calculate_nu12 (nu_f:float, nu_m:float ,V_f:float) -> float:
+    """Calculate modulus of a unidirectional continuous lamina in the direction parallel to the fiber orientation
+    Inputs
+    nu_f: Poisson's ratio of the fiber
+    nu_m: Poisson's ratio of the matrix
+    V_f: Volume fraction of fiber"""
+    return nu_f*V_f + nu_m(1-V_f)
+
 def calculate_G(E:float, nu:float) -> float:
     """Calculate shear modulus of an isotropic material
     Inputs
@@ -35,6 +43,8 @@ def calculate_G(G_f:float, G_m:float, V_f:float) -> float:
     G_m: Shear Modulus of the matrix
     V_f: Volume fraction of fiber"""
     return (G_f*G_m)/(G_m*V_f + (1-V_f)*G_f)
+
+
 
 #TODO: Halpin-Tsai Model for UD and random and Randomly Orient
 # #Halpin-Tsai : Unidirectional Continuous
