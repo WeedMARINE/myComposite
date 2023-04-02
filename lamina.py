@@ -44,6 +44,10 @@ def calculate_G(G_f:float, G_m:float, V_f:float) -> float:
     V_f: Volume fraction of fiber"""
     return (G_f*G_m)/(G_m*V_f + (1-V_f)*G_f)
 
+class Material:
+    def __init__(self,E_1,E_2,v_12) -> None:
+        pass
+
 
 
 #TODO: Halpin-Tsai Model for UD and random and Randomly Orient
