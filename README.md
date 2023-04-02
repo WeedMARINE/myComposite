@@ -1,20 +1,22 @@
-# lamipy
-Laminated composites engineering simulations in Python.
+# myComposite
+Laminated composites engineering simulations in Python. Forked from lamipy (https://github.com/joaopbernhardt/lamipy) for personal use in ME227 Class
 
-<img src="https://upload.wikimedia.org/wikipedia/commons/1/13/Composite_3d.png" data-canonical-src="https://upload.wikimedia.org/wikipedia/commons/1/13/Composite_3d.png" width="300" height="200" />
+<!-- <img src="https://upload.wikimedia.org/wikipedia/commons/1/13/Composite_3d.png" data-canonical-src="https://upload.wikimedia.org/wikipedia/commons/1/13/Composite_3d.png" width="300" height="200" /> -->
 
 ## Brief description:
 
-This project's purpose is to provide simple & accurate computations for engineering simulations of **fiber-reinforced composites**. This kind of advanced material is used in many areas of engineering: spacecrafts, pressure vessels, risers etc. Basically, the idea behind composite laminates is to produce a component which has the required engineering properties (high elastic modulus, low self-weight and others) through stacking many layers of laminae, in such way that each one can be layed in different fiber angles and can consist of different materials.
+Forked from lamipy (https://github.com/joaopbernhardt/lamipy) for personal use in ME227 Class
+
+This project's purpose is to provide simple computations for engineering simulations of **fiber-reinforced composites**. This kind of advanced material is used in many areas of engineering: spacecrafts, pressure vessels, risers etc. Basically, the idea behind composite laminates is to produce a component which has the required engineering properties (high elastic modulus, low self-weight and others) through stacking many layers of laminae, in such way that each one can be layed in different fiber angles and can consist of different materials.
 
 Therefore, a composite laminate consists of a material resultant of layers (laminae) bonded together. In this program, the layers are considered continuous and *orthotropic*. It is possible to input different properties for each used material in the layers.
 
-The implementation uses the **Classical Laminate Theory (CLT)** for computations. 
+Currently, implementation of micromechanics and macromechanics for lamina from Robert M. Jones's Mechanics of Composite Material Book is finished.
+
+I planned to incoporate implementation uses the **Classical Laminate Theory (CLT)** for computations. 
 The summary of this theory can be found in: [NASA's Basic Mechanics of Laminated Composite Plates](https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19950009349.pdf), [Prof. W. Stein's document](http://wstein.org/edu/2010/480b/projects/05-lamination_theory/A%20summary%20of%20Classical%20Lamination%20Theory.pdf) and other sources.
 
-Currently lamipy is *not ready for use* due to the lack of verification and validation tests, which will be produced soon.
-
-## Project goals:
+<!-- ## Project goals:
 
 - Provide a simple interface for laminate testing;
 - Display accurate information of results, including graphical analysis;
@@ -53,4 +55,4 @@ Through the obtained results from an analysis, it is possible to plot charts for
 <img src="docs/example_plot3.png" data-canonical-src="docs/example_plot3.png" />
 
 Also, since lamipy is capable of running a *progressive failure analysis*, it is possible to automatically plot the Load Factor vs. Average Strain of the laminate while directly pointing *First Ply Failure* and *Last Ply Failure*:
-<img src="docs/example_plot4.png" data-canonical-src="docs/example_plot4.png" />
+<img src="docs/example_plot4.png" data-canonical-src="docs/example_plot4.png" /> -->

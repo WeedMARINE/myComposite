@@ -5,35 +5,35 @@
 
 import numpy as np
 
-def calculate_E1(E_f:float, E_m:float ,V_f:float):
-    #This function calculate modulus of a unidirectional continuous lamina in the direction parallel to the fiber orientation
-    #Inputs
-    #E_f: Young's Modulus of the fiber
-    #E_m: Young's Modulus of the matrix
-    #V_f: Volume fraction of fiber
+def calculate_E1(E_f:float, E_m:float ,V_f:float) -> float: 
+    """Calculate modulus of a unidirectional continuous lamina in the direction parallel to the fiber orientation
+    Inputs
+    E_f: Young's Modulus of the fiber
+    E_m: Young's Modulus of the matrix
+    V_f: Volume fraction of fiber"""
     return E_f*V_f + E_m(1-V_f)
 
-def calculate_E2(E_f:float, E_m:float ,V_f:float):
-    #This function calculate modulus in the traverse direction
-    #Inputs
-    #E_f: Young's Modulus of the fiber
-    #E_m: Young's Modulus of the matrix
-    #V_f: Volume fraction of fiber
+def calculate_E2(E_f:float, E_m:float ,V_f:float) -> float:
+    """Calculate modulus in the traverse direction
+    Inputs
+    E_f: Young's Modulus of the fiber
+    E_m: Young's Modulus of the matrix
+    V_f: Volume fraction of fiber"""
     return (E_f*E_m)/(E_m*V_f + (1-V_f)*E_f)
 
-def calculate_G(E:float, nu:float):
-    #This function calculate shear modulus of an isotropic material
-    #Inputs
-    #E: Young's Modulus of the material
-    #nu: Poisson's ratio of the material
+def calculate_G(E:float, nu:float) -> float:
+    """Calculate shear modulus of an isotropic material
+    Inputs
+    E: Young's Modulus of the material
+    nu: Poisson's ratio of the material"""
     return E/(2*(1-nu))
 
-def calculate_G(G_f:float, G_m:float, V_f:float):
-    #This function calculate shear modulus of the lamaina
-    #Inputs
-    #G_f: Shear Modulus of the fiber
-    #G_m: Shear Modulus of the matrix
-    #V_f: Volume fraction of fiber
+def calculate_G(G_f:float, G_m:float, V_f:float) -> float:
+    """Calculate shear modulus of the lamaina
+    Inputs
+    G_f: Shear Modulus of the fiber
+    G_m: Shear Modulus of the matrix
+    V_f: Volume fraction of fiber"""
     return (G_f*G_m)/(G_m*V_f + (1-V_f)*G_f)
 
 #TODO: Halpin-Tsai Model for UD and random and Randomly Orient
