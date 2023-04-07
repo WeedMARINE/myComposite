@@ -61,4 +61,9 @@ def assemble_ABD_matrix(desc: Laminate_desc):
 
     return _A,_B,_D,_ABD
 
-# class Laminate:
+class Laminate:
+    def __init__(self,desc: Laminate_desc) -> None:
+        self.description = desc
+        self.vectorZ = assemble_Z_vector(self.description)
+        self.matrixABD = assemble_ABD_matrix(self.description) 
+        pass
