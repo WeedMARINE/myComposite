@@ -5,7 +5,7 @@
 
 import numpy as np
 
-class LaminaCalculationError(TypeError): pass
+# class LaminaCalculationError(Exception): pass
 
 def calculate_E1(E_f:float, E_m:float ,V_f:float) -> float: 
     """Calculate modulus of a unidirectional continuous lamina in the direction parallel to the fiber orientation based on Rule of mixture
@@ -13,7 +13,7 @@ def calculate_E1(E_f:float, E_m:float ,V_f:float) -> float:
     E_f: Young's Modulus of the fiber
     E_m: Young's Modulus of the matrix
     V_f: Volume fraction of fiber"""
-    return E_f*V_f + E_m(1-V_f)
+    return E_f*V_f + E_m*(1-V_f)
 
 def calculate_E2(E_f:float, E_m:float ,V_f:float) -> float:
     """Calculate modulus in the traverse direction
@@ -21,7 +21,7 @@ def calculate_E2(E_f:float, E_m:float ,V_f:float) -> float:
     E_f: Young's Modulus of the fiber
     E_m: Young's Modulus of the matrix
     V_f: Volume fraction of fiber"""
-    return (E_f*E_m)/(E_m*V_f + (1-V_f)*E_f)
+    return (E_f * E_m)/(E_m * V_f + (1-V_f) * E_f)
 
 def calculate_nu12 (nu_f:float, nu_m:float ,V_f:float) -> float:
     """Calculate modulus of a unidirectional continuous lamina in the direction parallel to the fiber orientation based on Rule of mixture
@@ -29,7 +29,7 @@ def calculate_nu12 (nu_f:float, nu_m:float ,V_f:float) -> float:
     nu_f: Poisson's ratio of the fiber
     nu_m: Poisson's ratio of the matrix
     V_f: Volume fraction of fiber"""
-    return nu_f*V_f + nu_m(1-V_f)
+    return nu_f*V_f + nu_m*(1-V_f)
 
 def calculate_material_G(E:float, nu:float) -> float:
     """Calculate shear modulus of an isotropic material 
@@ -38,7 +38,7 @@ def calculate_material_G(E:float, nu:float) -> float:
     nu: Poisson's ratio of the material"""
     return E/(2*(1-nu))
 
-def calculate_G_12(G_f:float, G_m:float, V_f:float) -> float:
+def calculate_G12(G_f:float, G_m:float, V_f:float) -> float:
     """Calculate shear modulus of the lamaina based on Rule of mixture
     Inputs
     G_f: Shear Modulus of the fiber
@@ -80,12 +80,12 @@ def calculate_G_12(G_f:float, G_m:float, V_f:float) -> float:
 #     v_rand = (E_rand/(2*G_rand))-1
 #     return E_rand,G_rand,v_rand
 
-def assemble_matrixT(angle):
+def assemble_transformation_matrix(angle):
     """ Assembles T matrix (angles transformation matrix LCS -> MCS).
     Inputs
     angle: rotation angle (deg)"""
     if not isinstance(angle, (int, float)) or not (-360 <= angle <= 360):
-        raise LaminaCalculationError("lamina angle is not between +- 360 degrees"+
+        raise Exception("lamina angle is not between +- 360 degrees"+
                                 " or it is not an int/float")
 
     #Transforms angle (degrees) to angle (radians)
@@ -103,17 +103,18 @@ def assemble_matrixT(angle):
                     [-cs, cs, cc-ss]])
     return T
 
-def assemble_matrixQ (E_1,E_2, nu_12, G_12):
+def assemble_reduced_stiffness_matrix (E_1,E_2, nu_12, G_12):
     """ Assembles Q matrix (reduced stiffness matrix) for a lamina. 
     Inputs
     E_1: Young's Modulus of the lamina
     E_2: Young's Modulus of the lamina
     nu_12: Poisson's ratio of the lamina
     G_12: Shear Modulus of the lamina"""
+    nu_21 = nu_12*E_2/E_1
 
-    Q11 = 1/E_1        
-    Q12 = -nu_12/E_1
-    Q22 = 1/E_2
+    Q11 = E_1/(1-nu_12*nu_21)        
+    Q12 = nu_12*E_1*E_2/(E_1-(nu_12**2)*E_2)
+    Q22 = E_1*E_2/(E_1-(nu_12**2)*E_2)
     Q66 = G_12
 
     Q = np.zeros((3, 3))
@@ -128,32 +129,55 @@ def calculate_matrixQbar (matrixQ, angle, matrixT = None):
     matrixQ: reduced stiffness matrix in principal fiber direction
     angle: angle: rotation angle (deg)
     matrixT: angles transformation matrix. If defined, the T matrix calculation will be skipped.  """
-    
+
     if matrixT is not None:
         if not isinstance(matrixT, (np.ndarray)):
-            raise LaminaCalculationError("angles transformation matrix need to be a 3x3 array")
-        T = matrixT
+            raise Exception("angles transformation matrix need to be a 3x3 array")
     else:
-        T = assemble_matrixT(angle)
+        T = assemble_transformation_matrix(angle)
     T_inv = np.linalg.inv(T)
     Qbar = T_inv@ matrixQ @ T_inv.T
     return Qbar
 
 class Material:
-    def __init__(self,E,nu,G: float = None) -> None:
-        self.E = E
-        self.nu = nu
+    def __init__(self,E,nu,G: float = None, name:str = "undefined") -> None:
+        self.name = name
+        self.E_1 = float(E)
+        self.E_2 = float(E)
+        self.nu_12 = float(nu)
         if G is None:
-            self.G = calculate_material_G(E,nu)
+            self.G_12 = calculate_material_G(E,nu)
         else:
-            self.G = G
+            self.G_12 = G
         pass
+        self.matrixQ = assemble_reduced_stiffness_matrix(self.E_1,self.E_2,self.nu_12,self.G_12)
 
-class lamina:
-    def __init__(self,fiber: Material, matrix: Material, V_f: float) -> None:
-        self.E_1 = calculate_E1(fiber.E,matrix.E,V_f)
-        self.E_2 = calculate_E2(fiber.E,matrix.E,V_f)
-        self.nu_12 = calculate_nu12(fiber.nu,matrix.nu,V_f)
-        self.G_12 = calculate_G_12(fiber.G,matrix.G,V_f)
-        self.matrixQ = assemble_matrixQ(self.E_1,self.E_2,self.nu_12,self.G_12) 
-        pass
+    def __str__(self) -> str:
+        return f'Name: {self.name} , E = {self.E_1}, nu = {self.nu_12}, G = {self.G_12}'
+
+class Lamina(Material):
+    def __init__(self,fiber: Material, matrix: Material, V_f: float, name:str = "undefined") -> None:
+        #remember the fiber and matrix
+        self.fiber = fiber
+        self.matrix = matrix
+        # self.angle = angle
+        
+        self.name = name
+        self.E_1 = calculate_E1(fiber.E_1,matrix.E_1,V_f)
+        self.E_2 = calculate_E2(fiber.E_1,matrix.E_1,V_f)
+        self.nu_12 = calculate_nu12(fiber.nu_12,matrix.nu_12,V_f)
+        self.G_12 = calculate_G12(fiber.G_12,matrix.G_12,V_f)
+        self.matrixQ = assemble_reduced_stiffness_matrix(self.E_1,self.E_2,self.nu_12,self.G_12)
+
+        # self.matrixQbar = self.matrixQ
+        # if self.angle != 0.0:
+        #     self.matrixQbar = calculate_matrixQbar(self.matrixQ, self.angle)
+
+    @classmethod
+    def from_Mat_props(cls,E_f: float,nu_f: float, E_m: float, nu_m: float, V_f: float, G_f: float = None, G_m: float = None, name_f:str = "undefined fiber", name_m:str = "undefined matrix", name_lam:str =  "undefined"):
+        fiber = Material(E_f,nu_f,G_f,name_f)
+        Matrix = Material(E_f,nu_f,G_f,name_f)
+        return cls(fiber,Matrix,V_f,name_m)
+    
+    def __str__(self) -> str:
+        return f'Name: {self.name} , fiber: {self.fiber.name}, Matrix: {self.matrix.name}, E_1 = {self.E_1}, E_2 = {self.E_2}, nu = {self.nu_12}, G = {self.G_12}'
