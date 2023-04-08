@@ -3,7 +3,6 @@
 #based on classical laminate theory
 
 from lamina import *
-from dataclasses import dataclass
 
 @dataclass
 class Laminate_desc:
@@ -27,11 +26,12 @@ def assemble_Z_vector(desc: Laminate_desc):
     else:
         layer_count = len(desc.thickness)
         _total_thickness = np.sum(desc.thickness)
-        _Z = np.zeros(layer_count+1)
-        _Z[0] = -_total_thickness/2
+        _Z = np.zeros(layer_count+1, dtype=float)
+        _Z[0] = -_total_thickness/2.0
 
         for i in range(layer_count):
             _Z[i+1] = _Z[i] + desc.thickness[i]
+
     return _Z
 
 def assemble_ABD_matrix(desc: Laminate_desc):
@@ -50,7 +50,7 @@ def assemble_ABD_matrix(desc: Laminate_desc):
         #assemble A
         _A = _A + _Qbar*(_Z[k+1]-_Z[k])
         #assemble B
-        _B = _B - (1/2)*_Qbar*(_Z[k+1]**2 - _Z[k]**2) #This need - to match result from online solver.
+        _B = _B + (1/2)*_Qbar*(_Z[k+1]**2 - _Z[k]**2) #This need - to match result from online solver.
         #assemble D
         _D = _D + (1/3)*_Qbar*(_Z[k+1]**3 - _Z[k]**3)
     
@@ -59,10 +59,11 @@ def assemble_ABD_matrix(desc: Laminate_desc):
         [_B,_D]
     ])
 
-    return _A,_B,_D,_ABD
+    return _ABD
 
 class Laminate:
-    def __init__(self,desc: Laminate_desc) -> None:
+    def __init__(self,desc: Laminate_desc,name:str = "unnamed") -> None:
+        self.name = name
         self.description = desc
         self.vectorZ = assemble_Z_vector(self.description)
         self.matrixABD = assemble_ABD_matrix(self.description) 

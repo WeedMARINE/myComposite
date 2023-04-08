@@ -4,8 +4,15 @@
 #Unidirectional Continuous fiber lamina only (Rule of Mixture)
 
 import numpy as np
+from dataclasses import dataclass
 
-# class LaminaCalculationError(Exception): pass
+# Recommended SI units for in puts
+# Modulus : Pa
+# angle : deg
+# Strength : pa
+# thickness : m
+# N(force per unit width) = N/m
+# M(moment per init width) = N m / m
 
 def calculate_E1(E_f:float, E_m:float ,V_f:float) -> float: 
     """Calculate modulus of a unidirectional continuous lamina in the direction parallel to the fiber orientation based on Rule of mixture
@@ -37,6 +44,14 @@ def calculate_material_G(E:float, nu:float) -> float:
     E: Young's Modulus of the material
     nu: Poisson's ratio of the material"""
     return E/(2*(1-nu))
+
+def calculate_material_nu21(nu_12:float,E_1:float,E_2:float)-> float:
+    """Calculate shear modulus of an isotropic material 
+    Inputs
+    nu_12: Poisson's ratio of the material
+    E_1: Young's Modulus of the material in  dir 1
+    E_2: Young's Modulus of the material in  dir 2"""
+    return nu_12*E_2/E_1
 
 def calculate_G12(G_f:float, G_m:float, V_f:float) -> float:
     """Calculate shear modulus of the lamaina based on Rule of mixture
@@ -103,14 +118,15 @@ def assemble_transformation_matrix(angle):
                     [-cs, cs, cc-ss]])
     return T
 
-def assemble_reduced_stiffness_matrix (E_1,E_2, nu_12, G_12):
+def assemble_reduced_stiffness_matrix (E_1,E_2, G_12, nu_12, nu_21: float = None):
     """ Assembles Q matrix (reduced stiffness matrix) for a lamina. 
     Inputs
     E_1: Young's Modulus of the lamina
     E_2: Young's Modulus of the lamina
     nu_12: Poisson's ratio of the lamina
     G_12: Shear Modulus of the lamina"""
-    nu_21 = nu_12*E_2/E_1
+    if nu_21 == None:
+        nu_21 = calculate_material_nu21(nu_12,E_1,E_2)
 
     Q11 = E_1/(1-nu_12*nu_21)        
     Q12 = nu_12*E_1*E_2/(E_1-(nu_12**2)*E_2)
@@ -139,45 +155,73 @@ def calculate_matrixQbar (matrixQ, angle, matrixT = None):
     Qbar = T_inv@ matrixQ @ T_inv.T
     return Qbar
 
+@dataclass
+class Strength:
+    """Class for containing description of a laminate strength."""
+    S_Lt:float
+    S_Lc:float
+    S_Tt:float
+    S_Tc:float
+    S_shear: float
+
 class Material:
-    def __init__(self,E,nu,G: float = None, name:str = "undefined") -> None:
+    def __init__(self, E_1: float, E_2: float, nu_12, G_12: float, strength:Strength = None , name:str = "undefined", is_isotropic: bool = False) -> None:
         self.name = name
-        self.E_1 = float(E)
-        self.E_2 = float(E)
-        self.nu_12 = float(nu)
+        self.E_1 = float(E_1)
+        self.E_2 = float(E_2)
+        self.nu_12 = float(nu_12)
+        self.nu_21 = calculate_material_nu21(self.nu_12,self.E_1,self.E_2)
+        self.G_12 = G_12
+        self.strength  = strength
+        self.matrixQ = assemble_reduced_stiffness_matrix(self.E_1,self.E_2, self.G_12, self.nu_12,self.nu_21)
+        self.is_isotropic = is_isotropic
+        
+    @classmethod
+    def isotropic(cls,E: float,nu: float,G: float = None, strength:Strength = None ,name:str = "undefined") -> None:
         if G is None:
-            self.G_12 = calculate_material_G(E,nu)
-        else:
-            self.G_12 = G
-        pass
-        self.matrixQ = assemble_reduced_stiffness_matrix(self.E_1,self.E_2,self.nu_12,self.G_12)
-
+            G = calculate_material_G(E,nu)
+        return cls(E_1= E, E_2= E, nu_12= nu, G_12 =G, strength = strength, name= name, is_isotropic = True)
+    
     def __str__(self) -> str:
-        return f'Name: {self.name} , E = {self.E_1}, nu = {self.nu_12}, G = {self.G_12}'
-
-class Lamina(Material):
-    def __init__(self,fiber: Material, matrix: Material, V_f: float, name:str = "undefined") -> None:
+        return "material name: %s, E_1: %s, E_2: %s, nu_12: %s, nu_21: %s, G_12: %s, is_isotropic: %s" % (self.name, self.E_1, self.E_2, self.nu_12, self.nu_21, self.G_12, self.is_isotropic)
+    
+class Lamina(Material):    
+    def __init__(self,fiber: Material, matrix: Material, V_f: float, strength:Strength = None ,name:str = "undefined") -> None:
+        if not (fiber.is_isotropic and matrix.is_isotropic):
+            raise Exception("Fiber and Matrix must be isotropic material")
         #remember the fiber and matrix
+        self.name = name
         self.fiber = fiber
         self.matrix = matrix
-        # self.angle = angle
         
-        self.name = name
         self.E_1 = calculate_E1(fiber.E_1,matrix.E_1,V_f)
         self.E_2 = calculate_E2(fiber.E_1,matrix.E_1,V_f)
         self.nu_12 = calculate_nu12(fiber.nu_12,matrix.nu_12,V_f)
+        self.nu_21 = calculate_material_nu21(self.nu_12,self.E_1,self.E_2)
         self.G_12 = calculate_G12(fiber.G_12,matrix.G_12,V_f)
-        self.matrixQ = assemble_reduced_stiffness_matrix(self.E_1,self.E_2,self.nu_12,self.G_12)
-
-        # self.matrixQbar = self.matrixQ
-        # if self.angle != 0.0:
-        #     self.matrixQbar = calculate_matrixQbar(self.matrixQ, self.angle)
+        self.matrixQ = assemble_reduced_stiffness_matrix(self.E_1,self.E_2, self.G_12,self.nu_12)
+        self.strength  = strength
+        self.is_isotropic = False
 
     @classmethod
-    def from_Mat_props(cls,E_f: float,nu_f: float, E_m: float, nu_m: float, V_f: float, G_f: float = None, G_m: float = None, name_f:str = "undefined fiber", name_m:str = "undefined matrix", name_lam:str =  "undefined"):
-        fiber = Material(E_f,nu_f,G_f,name_f)
-        Matrix = Material(E_f,nu_f,G_f,name_f)
-        return cls(fiber,Matrix,V_f,name_m)
+    def from_Mat_props(cls, E_1: float, E_2: float, nu_12, G_12: float, strength:Strength = None ,name:str = "undefined"):
+        obj = cls.__new__(cls)
+        super(Lamina, obj).__init__(E_1,E_2,nu_12,G_12,name)
+        
+        #remember the fiber and matrix
+        obj.name = name
+        obj.fiber = None
+        obj.matrix = None
+
+        obj.E_1 = float(E_1)
+        obj.E_2 = float(E_2)
+        obj.nu_12 = float(nu_12)
+        obj.nu_21 = calculate_material_nu21(obj.nu_12,obj.E_1,obj.E_2)
+        obj.G_12 = G_12
+        obj.matrixQ = assemble_reduced_stiffness_matrix(obj.E_1,obj.E_2, obj.G_12, obj.nu_12,obj.nu_21)
+        obj.strength  = strength
+        obj.is_isotropic = False
+        return obj
+
     
-    def __str__(self) -> str:
-        return f'Name: {self.name} , fiber: {self.fiber.name}, Matrix: {self.matrix.name}, E_1 = {self.E_1}, E_2 = {self.E_2}, nu = {self.nu_12}, G = {self.G_12}'
+
