@@ -6,10 +6,14 @@ from lamina import *
 
 @dataclass
 class Laminate_desc:
-    """Class for containing description of a laminate."""
+    """Class for containing description of a laminate. To override ply thickness value, specify thickness tuple."""
     plies: tuple[Lamina, ...]
-    thickness: tuple[float, ...]
     angles: tuple[float, ...]
+    thickness: tuple[float, ...] = field(default=None)
+    
+    def __post_init__(self):
+        if self.thickness is None:
+            self.thickness = tuple(ply.thickness for ply in self.plies)
 
     def is_valid(self) -> bool: 
         _validity = False
@@ -66,5 +70,16 @@ class Laminate:
         self.name = name
         self.description = desc
         self.vectorZ = assemble_Z_vector(self.description)
-        self.matrixABD = assemble_ABD_matrix(self.description) 
+        self.matrixABD = assemble_ABD_matrix(self.description)
+        # self.global_stiffness_matrix = np.sum([ply.matrixQ* for ply in desc.plies],axis=0)
+        self.density = np.sum([ply.density*ply.thickness for ply in desc.plies])/np.sum([ply.thickness for ply in desc.plies])
         pass
+
+    def get_matrixA(self):
+        return self.matrixABD[:3,:3]
+    
+    def get_matrixB(self):
+        return self.matrixABD[:3,-3:]
+    
+    def get_matrixD(self):
+        return self.matrixABD[-3:,-3:]

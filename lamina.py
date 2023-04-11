@@ -4,7 +4,7 @@
 #Unidirectional Continuous fiber lamina only (Rule of Mixture)
 
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # Recommended SI units for in puts
 # Modulus : Pa
@@ -62,17 +62,11 @@ def calculate_G12(G_f:float, G_m:float, V_f:float) -> float:
     return (G_f*G_m)/(G_m*V_f + (1-V_f)*G_f)
 
 #TODO: Halpin-Tsai Model for UD and random and Randomly Orient
-# #Halpin-Tsai : Unidirectional Continuous
-# def cal_halpinTsai(Em,Ef,Vf,psi):
-#   E_ratio = Ef/Em
-#   eta = (E_ratio-1)/(E_ratio+psi)
-#   return (Em*(1+psi*eta*Vf))/(1-eta*Vf)
-
-# #Halpin-Tsai Unidirectional Calculation
-# HT_E1 = cal_halpinTsai(3.5,72,0.4,100)
-# HT_E2 = cal_halpinTsai(3.5,72,0.4,2)
-# print(HT_E1)
-# print(HT_E2)
+#Halpin-Tsai : Unidirectional Continuous
+def calculate_halpinTsai(E_m,E_f,V_f,psi):
+  E_ratio = E_f/E_m
+  eta = (E_ratio-1)/(E_ratio+psi)
+  return (E_m*(1+psi*eta*V_f))/(1-eta*V_f)
 
 # #Unidirectional Discontinuous
 # def cal_MatProp_UD(Em,Ef,Vf,AR):
@@ -186,7 +180,7 @@ class Material:
         return "material name: %s, E_1: %s, E_2: %s, nu_12: %s, nu_21: %s, G_12: %s, is_isotropic: %s" % (self.name, self.E_1, self.E_2, self.nu_12, self.nu_21, self.G_12, self.is_isotropic)
     
 class Lamina(Material):    
-    def __init__(self,fiber: Material, matrix: Material, V_f: float, strength:Strength = None ,name:str = "undefined") -> None:
+    def __init__(self,fiber: Material, matrix: Material, V_f: float, thickness:float, strength:Strength = None , density:float = None, name:str = "undefined") -> None:
         if not (fiber.is_isotropic and matrix.is_isotropic):
             raise Exception("Fiber and Matrix must be isotropic material")
         #remember the fiber and matrix
@@ -195,16 +189,18 @@ class Lamina(Material):
         self.matrix = matrix
         
         self.E_1 = calculate_E1(fiber.E_1,matrix.E_1,V_f)
-        self.E_2 = calculate_E2(fiber.E_1,matrix.E_1,V_f)
+        self.E_2 = calculate_halpinTsai(fiber.E_1,matrix.E_1,V_f,2)
         self.nu_12 = calculate_nu12(fiber.nu_12,matrix.nu_12,V_f)
         self.nu_21 = calculate_material_nu21(self.nu_12,self.E_1,self.E_2)
         self.G_12 = calculate_G12(fiber.G_12,matrix.G_12,V_f)
         self.matrixQ = assemble_reduced_stiffness_matrix(self.E_1,self.E_2, self.G_12,self.nu_12)
+        self.thickness = thickness
         self.strength  = strength
+        self.density  = density
         self.is_isotropic = False
 
     @classmethod
-    def from_Mat_props(cls, E_1: float, E_2: float, nu_12, G_12: float, strength:Strength = None ,name:str = "undefined"):
+    def from_Mat_props(cls, E_1: float, E_2: float, nu_12, G_12: float, thickness:float, strength:Strength = None, density:float = None,name:str = "undefined"):
         obj = cls.__new__(cls)
         super(Lamina, obj).__init__(E_1,E_2,nu_12,G_12,name)
         
@@ -219,7 +215,9 @@ class Lamina(Material):
         obj.nu_21 = calculate_material_nu21(obj.nu_12,obj.E_1,obj.E_2)
         obj.G_12 = G_12
         obj.matrixQ = assemble_reduced_stiffness_matrix(obj.E_1,obj.E_2, obj.G_12, obj.nu_12,obj.nu_21)
+        obj.thickness = thickness
         obj.strength  = strength
+        obj.density  = density
         obj.is_isotropic = False
         return obj
 
