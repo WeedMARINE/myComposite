@@ -57,7 +57,8 @@ def laminate_failure_check(laminate:Laminate, failure_criteria: callable, load):
     for k in range(layer_count):
         ply_strain_xy = midplane_strain_xy + laminate.vectorZ[k+1]*midplane_curvature
         ply_stress_xy = laminate.description.plies[k].matrixQ @ ply_strain_xy
-        is_failed, factor_of_safety = failure_criteria(laminate.description.plies[k], laminate.description.angles[k],ply_stress_xy)
+        ply_stress_12 = assemble_transformation_matrix(-laminate.description.angles[k]) @ ply_stress_xy
+        is_failed, factor_of_safety = failure_criteria(laminate.description.plies[k], laminate.description.angles[k],ply_stress_12)
         plies_is_failed.append(is_failed)
         plies_factor_of_safety.append(factor_of_safety)
     
